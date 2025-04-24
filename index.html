@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบค้นหาสินค้า</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            background: #f1f1f1;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            border-radius: 4px 4px 0 0;
+            margin-right: 5px;
+        }
+        .tab.active {
+            background: #4a6bff;
+            color: white;
+            border-color: #4a6bff;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="file"] {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background: #4a6bff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #3451c6;
+        }
+        .suggestions {
+            position: absolute;
+            width: calc(100% - 42px);
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-top: none;
+            border-radius: 0 0 4px 4px;
+            background: white;
+            z-index: 10;
+            display: none;
+        }
+        .suggestion-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+        }
+        .suggestion-item:hover {
+            background: #f1f1f1;
+        }
+        .suggestion-name {
+            font-weight: bold;
+        }
+        .suggestion-id {
+            color: #666;
+            font-size: 12px;
+        }
+        .search-result {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #f9f9f9;
+            display: none;
+        }
+        .product-list {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        .product-list th {
+            background: #f1f1f1;
+            padding: 10px;
+            text-align: left;
+        }
+        .product-list td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+        }
+        .edit-btn {
+            background: #ffa500;
+        }
+        .edit-btn:hover {
+            background: #e69500;
+        }
+        .delete-btn {
+            background: #ff4d4d;
+        }
+        .delete-btn:hover {
+            background: #e63939;
+        }
+        .form-container {
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #f9f9f9;
+            margin-bottom: 20px;
+        }
+        .search-wrapper {
+            position: relative;
+        }
+        .info-message {
+            margin-top: 10px;
+            color: #666;
+            font-size: 14px;
+        }
+        .error-message {
+            color: #ff4d4d;
+            margin-top: 10px;
+            display: none;
+        }
+        .sample-data-btn {
+            background: #28a745;
+            margin-bottom: 10px;
+        }
+        .sample-data-btn:hover {
+            background: #218838;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ระบบจัดการสินค้า</h1>
+
+        <div class="tabs">
+            <div class="tab active" data-tab="search">ค้นหา</div>
+            <div class="tab" data-tab="database">ฐานข้อมูล</div>
+            <div class="tab" data-tab="add">เพิ่มสินค้า</div>
+        </div>
+
+        <div class="tab-content active" id="search-tab">
+            <div class="form-container">
+                <div class="form-group">
+                    <label for="search-input">ค้นหาจากชื่อสินค้า:</label>
+                    <div class="search-wrapper">
+                        <input type="text" id="search-input" placeholder="พิมพ์ชื่อสินค้าที่ต้องการค้นหา...">
+                        <div class="suggestions" id="suggestions-list"></div>
+                    </div>
+                </div>
+                <div class="info-message" id="search-info">โหลดไฟล์ Excel เพื่อเริ่มใช้งาน</div>
+            </div>
+
+            <div class="search-result" id="search-result">
+                <h2>ผลการค้นหา</h2>
+                <div class="form-group">
+                    <label>ชื่อสินค้า:</label>
+                    <div id="result-name"></div>
+                </div>
+                <div class="form-group">
+                    <label>รหัสสินค้า:</label>
+                    <div id="result-id" style="font-size: 18px; font-weight: bold; color: #4a6bff;"></div>
+                </div>
+                <div class="form-group">
+                    <button id="edit-result-btn" class="edit-btn">แก้ไข</button>
+                    <button id="delete-result-btn" class="delete-btn">ลบ</button>
+                    <button id="new-search-btn">ค้นหาใหม่</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="database-tab">
+            <div class="form-container">
+                <button id="load-sample-data" class="sample-data-btn">โหลดข้อมูลตัวอย่าง</button>
+                <div class="form-group">
+                    <label for="excel-file">อัพโหลดไฟล์ Excel:</label>
+                    <input type="file" id="excel-file" accept=".xlsx, .xls">
+                </div>
+                <button id="load-excel-btn">โหลดข้อมูล</button>
+                <button id="export-excel-btn" style="margin-left: 10px;">ส่งออกเป็น Excel</button>
+                <div class="error-message" id="load-error">ไม่สามารถโหลดไฟล์ได้ กรุณาตรวจสอบรูปแบบไฟล์</div>
+            </div>
+
+            <h2>รายการสินค้าทั้งหมด</h2>
+            <div id="products-table-container">
+                <table class="product-list" id="products-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 25%">รหัสสินค้า</th>
+                            <th style="width: 50%">ชื่อสินค้า</th>
+                            <th style="width: 25%">จัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="products-table-body">
+                        <tr>
+                            <td colspan="3" style="text-align: center;">ยังไม่มีข้อมูล</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="tab-content" id="add-tab">
+            <div class="form-container">
+                <h2>เพิ่มสินค้าใหม่</h2>
+                <div class="form-group">
+                    <label for="new-product-id">รหัสสินค้า:</label>
+                    <input type="text" id="new-product-id" placeholder="เช่น P001">
+                </div>
+                <div class="form-group">
+                    <label for="new-product-name">ชื่อสินค้า:</label>
+                    <input type="text" id="new-product-name" placeholder="เช่น กระเป๋าเดินทาง">
+                </div>
+                <button id="add-product-btn">เพิ่มสินค้า</button>
+            </div>
+        </div>
+
+        <div class="tab-content" id="edit-tab">
+            <div class="form-container">
+                <h2>แก้ไขสินค้า</h2>
+                <div class="form-group">
+                    <label for="edit-product-id">รหัสสินค้า:</label>
+                    <input type="text" id="edit-product-id">
+                </div>
+                <div class="form-group">
+                    <label for="edit-product-name">ชื่อสินค้า:</label>
+                    <input type="text" id="edit-product-name">
+                </div>
+                <div class="form-group">
+                    <button id="save-edit-btn">บันทึก</button>
+                    <button id="cancel-edit-btn">ยกเลิก</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ตัวแปรสำหรับเก็บข้อมูลสินค้า
+        let products = [];
+        let selectedProduct = null;
+        let originalProductId = null;
+
+        // ข้อมูลตัวอย่าง
+        const sampleData = [
+            { id: "P001", name: "กระเป๋าเดินทาง 20 นิ้ว" },
+            { id: "P002", name: "กระเป๋าเดินทาง 24 นิ้ว" },
+            { id: "P003", name: "กระเป๋าเป้ แล็ปท็อป" },
+            { id: "P004", name: "รองเท้าผ้าใบ สีขาว" },
+            { id: "P005", name: "รองเท้าผ้าใบ สีดำ" },
+            { id: "P006", name: "เสื้อยืด สีขาว ไซส์ S" },
+            { id: "P007", name: "เสื้อยืด สีขาว ไซส์ M" },
+            { id: "P008", name: "เสื้อยืด สีขาว ไซส์ L" },
+            { id: "P009", name: "เสื้อยืด สีดำ ไซส์ S" },
+            { id: "P010", name: "เสื้อยืด สีดำ ไซส์ M" },
+            { id: "P011", name: "เสื้อยืด สีดำ ไซส์ L" },
+            { id: "P012", name: "กางเกงยีนส์ ขาสั้น" },
+            { id: "P013", name: "กางเกงยีนส์ ขายาว" },
+            { id: "P014", name: "แว่นตากันแดด" },
+            { id: "P015", name: "หมวกแก๊ป" }
+        ];
+
+        // ดึงอ้างอิงถึง DOM elements
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+        const searchInput = document.getElementById('search-input');
+        const suggestionsList = document.getElementById('suggestions-list');
+        const searchResult = document.getElementById('search-result');
+        const resultName = document.getElementById('result-name');
+        const resultId = document.getElementById('result-id');
+        const newSearchBtn = document.getElementById('new-search-btn');
+        const excelFileInput = document.getElementById('excel-file');
+        const loadExcelBtn = document.getElementById('load-excel-btn');
+        const exportExcelBtn = document.getElementById('export-excel-btn');
+        const loadSampleDataBtn = document.getElementById('load-sample-data');
+        const loadError = document.getElementById('load-error');
+        const productsTableBody = document.getElementById('products-table-body');
+        const addProductBtn = document.getElementById('add-product-btn');
+        const newProductId = document.getElementById('new-product-id');
+        const newProductName = document.getElementById('new-product-name');
+        const editProductId = document.getElementById('edit-product-id');
+        const editProductName = document.getElementById('edit-product-name');
+        const saveEditBtn = document.getElementById('save-edit-btn');
+        const cancelEditBtn = document.getElementById('cancel-edit-btn');
+        const editResultBtn = document.getElementById('edit-result-btn');
+        const deleteResultBtn = document.getElementById('delete-result-btn');
+        const searchInfo = document.getElementById('search-info');
+
+        // ฟังก์ชั่นสำหรับการนำทางแท็บ
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabId = tab.getAttribute('data-tab');
+                
+                // ซ่อนแท็บที่เปิดอยู่
+                tabs.forEach(t => t.classList.remove('active'));
+                tabContents.forEach(c => c.classList.remove('active'));
+                
+                // แสดงแท็บที่เลือก
+                tab.classList.add('active');
+                document.getElementById(`${tabId}-tab`).classList.add('active');
+            });
+        });
+
+        // โหลดข้อมูลตัวอย่าง
+        loadSampleDataBtn.addEventListener('click', function() {
+            products = [...sampleData];
+            updateProductsTable();
+            updateSearchInfo();
+            alert('โหลดข้อมูลตัวอย่างเรียบร้อยแล้ว');
+        });
+
+        // ฟังก์ชั่นสำหรับโหลดไฟล์ Excel
+        loadExcelBtn.addEventListener('click', function() {
+            const file = excelFileInput.files[0];
+            if (!file) {
+                alert('กรุณาเลือกไฟล์ Excel ก่อน');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    
+                    // ดึงข้อมูลจาก sheet แรก
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    
+                    // แปลงข้อมูลเป็น JSON
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet);
+                    
+                    // ตรวจสอบว่ามีคอลัมน์ที่ต้องการหรือไม่
+                    if (jsonData.length > 0 && 'Product ID' in jsonData[0] && 'Product Name' in jsonData[0]) {
+                        products = jsonData.map(row => ({
+                            id: row['Product ID'].toString(),
+                            name: row['Product Name'].toString()
+                        }));
+                        
+                        loadError.style.display = 'none';
+                        updateProductsTable();
+                        updateSearchInfo();
+                        
+                        // แสดงแท็บฐานข้อมูล
+                        alert(`โหลดข้อมูลสำเร็จ ${products.length} รายการ`);
+                    } else {
+                        loadError.textContent = 'ไฟล์ Excel ไม่ถูกต้อง กรุณาตรวจสอบให้มีคอลัมน์ "Product ID" และ "Product Name"';
+                        loadError.style.display = 'block';
+                    }
+                } catch (error) {
+                    console.error('Error loading Excel file:', error);
+                    loadError.textContent = 'เกิดข้อผิดพลาดในการอ่านไฟล์ Excel';
+                    loadError.style.display = 'block';
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        // อัพเดตข้อความแสดงจำนวนสินค้า
+        function updateSearchInfo() {
+            searchInfo.textContent = `มีสินค้าทั้งหมด ${products.length} รายการ`;
+        }
+
+        // ฟังก์ชั่นสำหรับค้นหาสินค้า
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.trim().toLowerCase();
+            
+            if (searchTerm === '') {
+                suggestionsList.innerHTML = '';
+                suggestionsList.style.display = 'none';
+                return;
+            }
+            
+            const filtered = products.filter(product => 
+                product.name.toLowerCase().includes(searchTerm)
+            );
+            
+            if (filtered.length > 0) {
+                suggestionsList.innerHTML = '';
+                
+                filtered.slice(0, 10).forEach(product => {
+                    const item = document.createElement('div');
+                    item.className = 'suggestion-item';
+                    item.innerHTML = `
+                        <div class="suggestion-name">${product.name}</div>
+                        <div class="suggestion-id">รหัส: ${product.id}</div>
+                    `;
+                    
+                    item.addEventListener('click', () => {
+                        selectedProduct = product;
+                        searchInput.value = product.name;
+                        suggestionsList.style.display = 'none';
+                        showSearchResult();
+                    });
+                    
+                    suggestionsList.appendChild(item);
+                });
+                
+                suggestionsList.style.display = 'block';
+            } else {
+                suggestionsList.innerHTML = '';
+                suggestionsList.style.display = 'none';
+            }
+        });
+
+        // ปิด suggestions เมื่อคลิกที่อื่น
+        document.addEventListener('click', function(e) {
+            if (e.target !== searchInput && e.target !== suggestionsList) {
+                suggestionsList.style.display = 'none';
+            }
+        });
+
+        // แสดงผลการค้นหา
+        function showSearchResult() {
+            if (selectedProduct) {
+                resultName.textContent = selectedProduct.name;
+                resultId.textContent = selectedProduct.id;
+                searchResult.style.display = 'block';
+            }
+        }
+
+        // เริ่มการค้นหาใหม่
+        newSearchBtn.addEventListener('click', function() {
+            selectedProduct = null;
+            searchInput.value = '';
+            searchResult.style.display = 'none';
+        });
+
+        // อัพเดตตารางแสดงสินค้า
+        function updateProductsTable() {
+            if (products.length === 0) {
+                productsTableBody.innerHTML = '<tr><td colspan="3" style="text-align: center;">ยังไม่มีข้อมูล</td></tr>';
+                return;
+            }
+            
+            // เรียงลำดับตามรหัสสินค้า
+            const sortedProducts = [...products].sort((a, b) => a.id.localeCompare(b.id));
+            
+            productsTableBody.innerHTML = '';
+            sortedProducts.forEach(product => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${product.id}</td>
+                    <td>${product.name}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="edit-btn" data-id="${product.id}">แก้ไข</button>
+                            <button class="delete-btn" data-id="${product.id}">ลบ</button>
+                        </div>
+                    </td>
+                `;
+                productsTableBody.appendChild(row);
+            });
+            
+            // เพิ่ม event listeners สำหรับปุ่มแก้ไขและลบ
+            document.querySelectorAll('.edit-btn').forEach(btn => {
+                if (btn.id !== 'edit-result-btn') {
+                    btn.addEventListener('click', function() {
+                        const productId = this.getAttribute('data-id');
+                        startEdit(productId);
+                    });
+                }
+            });
+            
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                if (btn.id !== 'delete-result-btn') {
+                    btn.addEventListener('click', function() {
+                        const productId = this.getAttribute('data-id');
+                        deleteProduct(productId);
+                    });
+                }
+            });
+        }
+
+        // เริ่มแก้ไขสินค้า
+        function startEdit(productId) {
+            const product = products.find(p => p.id === productId);
+            if (product) {
+                editProductId.value = product.id;
+                editProductName.value = product.name;
+                originalProductId = product.id;
+                
+                // เปลี่ยนไปที่แท็บแก้ไข
+                tabs.forEach(t => t.classList.remove('active'));
+                tabContents.forEach(c => c.classList.remove('active'));
+                document.getElementById('edit-tab').classList.add('active');
+            }
+        }
+
+        // เพิ่ม event listener สำหรับปุ่มแก้ไขในผลการค้นหา
+        editResultBtn.addEventListener('click', function() {
+            if (selectedProduct) {
+                startEdit(selectedProduct.id);
+            }
+        });
+
+        // เพิ่ม event listener สำหรับปุ่มลบในผลการค้นหา
+        deleteResultBtn.addEventListener('click', function() {
+            if (selectedProduct) {
+                deleteProduct(selectedProduct.id);
+                selectedProduct = null;
+                searchResult.style.display = 'none';
+                searchInput.value = '';
+            }
+        });
+
+        // บันทึกการแก้ไข
+        saveEditBtn.addEventListener('click', function() {
+            const newId = editProductId.value.trim();
+            const newName = editProductName.value.trim();
+            
+            if (newId === '' || newName === '') {
+                alert('กรุณากรอกข้อมูลให้ครบถ้วน');
+                return;
+            }
+            
+            // ตรวจสอบว่ารหัสใหม่ซ้ำกับรหัสเดิมหรือไม่
+            if (newId !== originalProductId && products.some(p => p.id === newId)) {
+                alert('รหัสสินค้านี้มีอยู่แล้ว กรุณาใช้รหัสอื่น');
+                return;
+            }
+            
+            // อัพเดตข้อมูล
+            products = products.map(p => 
+                p.id === originalProductId ? { id: newId, name: newName } : p
+            );
+            
+            // อัพเดตตาราง
+            updateProductsTable();
+            
+            // ถ้ามีการแก้ไขสินค้าที่เลือกอยู่ ให้อัพเดต selectedProduct ด้วย
+            if (selectedProduct && selectedProduct.id === originalProductId) {
+                selectedProduct = { id: newId, name: newName };
+                if (searchResult.style.display === 'block') {
+                    showSearchResult();
+                }
+            }
+            
+            // กลับไปที่แท็บฐานข้อมูล
+            tabs[1].click();
+            alert('บันทึกการแก้ไขเรียบร้อย');
+        });
+
+        // ยกเลิกการแก้ไข
+        cancelEditBtn.addEventListener('click', function() {
+            // กลับไปที่แท็บฐานข้อมูล
+            tabs[1].click();
+        });
+
+        // ลบสินค้า
+        function deleteProduct(productId) {
+            if (confirm('คุณต้องการลบสินค้านี้ใช่หรือไม่?')) {
+                products = products.filter(p => p.id !== productId);
+                updateProductsTable();
+                updateSearchInfo();
+                alert('ลบสินค้าเรียบร้อย');
+            }
+        }
+
+        // เพิ่มสินค้าใหม่
+        addProductBtn.addEventListener('click', function() {
+            const id = newProductId.value.trim();
+            const name = newProductName.value.trim();
+            
+            if (id === '' || name === '') {
+                alert('กรุณากรอกข้อมูลให้ครบถ้วน');
+                return;
+            }
+            
+            // ตรวจสอบว่ารหัสซ้ำหรือไม่
+            if (products.some(p => p.id === id)) {
+                alert('รหัสสินค้านี้มีอยู่แล้ว กรุณาใช้รหัสอื่น');
+                return;
+            }
+            
+            // เพิ่มสินค้าใหม่
+            products.push({ id, name });
+            updateProductsTable();
+            updateSearchInfo();
+            
+            // ล้างฟอร์ม
+            newProductId.value = '';
+            newProductName.value = '';
+            
+            alert('เพิ่มสินค้าเรียบร้อย');
+            
+            // กลับไปที่แท็บฐานข้อมูล
+            tabs[1].click();
+        });
+
+        // สร้างไฟล์ Excel สำหรับดาวน์โหลด
+        exportExcelBtn.addEventListener('click', function() {
+            if (products.length === 0) {
+                alert('ไม่มีข้อมูลสินค้าที่จะส่งออก');
+                return;
+            }
+            
+            // สร้าง worksheet
+            const ws = XLSX.utils.json_to_sheet(products.map(p => ({
+                'Product ID': p.id,
+                'Product Name': p.name
+            })));
+            
+            // สร้าง workbook
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Products');
+            
+            // แปลงเป็นไฟล์ Excel และดาวน์โหลด
+            XLSX.writeFile(wb, 'products.xlsx');
+        });
+
+        // โหลดข้อมูลตัวอย่างเมื่อเริ่มต้น
+        products = [...sampleData];
+        updateProductsTable();
+        updateSearchInfo();
+    </script>
+</body>
+</html>
