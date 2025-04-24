@@ -277,67 +277,6 @@
     </div>
 
     <script>
-        // ตัวแปรสำหรับเก็บข้อมูล JSONBin
-        const BIN_ID = 'YOUR_BIN_ID_HERE'; // เปลี่ยนเป็น Bin ID ของคุณ
-        const API_KEY = 'YOUR_API_KEY_HERE'; // เปลี่ยนเป็น API Key ของคุณ
-
-        // โหลดข้อมูลจาก JSONBin
-        async function loadProductsFromJSONBin() {
-          try {
-            const response = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
-              method: 'GET',
-              headers: {
-                'X-Master-Key': API_KEY
-              }
-            });
-            
-            if (!response.ok) {
-              throw new Error('ไม่สามารถโหลดข้อมูลได้');
-            }
-            
-            const data = await response.json();
-            
-            if (data.record && data.record.products) {
-              products = data.record.products;
-              updateProductsTable();
-              updateSearchInfo();
-            } else {
-              // ถ้าไม่มีข้อมูลหรือรูปแบบไม่ถูกต้อง ให้ใช้ข้อมูลตัวอย่าง
-              products = [...sampleData];
-              saveProductsToJSONBin(); // บันทึกข้อมูลตัวอย่างลง JSONBin
-            }
-          } catch (error) {
-            console.error('Error loading from JSONBin:', error);
-            // กรณีเกิดข้อผิดพลาด ใช้ข้อมูลตัวอย่าง
-            products = [...sampleData];
-            updateProductsTable();
-            updateSearchInfo();
-          }
-        }
-
-        // บันทึกข้อมูลลง JSONBin
-        async function saveProductsToJSONBin() {
-          try {
-            const response = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
-              method: 'PUT',
-              headers: {
-                'Content-Type': 'application/json',
-                'X-Master-Key': API_KEY
-              },
-              body: JSON.stringify({ products: products })
-            });
-            
-            if (!response.ok) {
-              throw new Error('ไม่สามารถบันทึกข้อมูลได้');
-            }
-            
-            console.log('บันทึกข้อมูลเรียบร้อย');
-          } catch (error) {
-            console.error('Error saving to JSONBin:', error);
-            alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' + error.message);
-          }
-        }
-
         // ตัวแปรสำหรับเก็บข้อมูลสินค้า
         let products = [];
         let selectedProduct = null;
@@ -361,6 +300,10 @@
             { id: "P014", name: "แว่นตากันแดด" },
             { id: "P015", name: "หมวกแก๊ป" }
         ];
+
+        // ตัวแปรสำหรับเก็บข้อมูล JSONBin
+        const BIN_ID = '680a322e8561e97a500696b4'; // Bin ID
+        const API_KEY = '$2a$10$0h1ALClWoI9oi5XNztldwuSV4IcjYmOqsZIw7KAj/ZosiHnMU6x3C'; // API Key
 
         // ดึงอ้างอิงถึง DOM elements
         const tabs = document.querySelectorAll('.tab');
@@ -387,6 +330,151 @@
         const editResultBtn = document.getElementById('edit-result-btn');
         const deleteResultBtn = document.getElementById('delete-result-btn');
         const searchInfo = document.getElementById('search-info');
+
+        // ฟังก์ชันสำหรับโหลดข้อมูลจาก JSONBin
+        async function loadProductsFromJSONBin() {
+            try {
+                const response = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+                    method: 'GET',
+                    headers: {
+                        'X-Master-Key': API_KEY
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('ไม่สามารถโหลดข้อมูลได้');
+                }
+                
+                const data = await response.json();
+                
+                if (data.record && data.record.products) {
+                    products = data.record.products;
+                    updateProductsTable();
+                    updateSearchInfo();
+                } else {
+                    // ถ้าไม่มีข้อมูลหรือรูปแบบไม่ถูกต้อง ให้ใช้ข้อมูลตัวอย่าง
+                    products = [...sampleData];
+                    saveProductsToJSONBin(); // บันทึกข้อมูลตัวอย่างลง JSONBin
+                    updateProductsTable();
+                    updateSearchInfo();
+                }
+            } catch (error) {
+                console.error('Error loading from JSONBin:', error);
+                // กรณีเกิดข้อผิดพลาด ใช้ข้อมูลตัวอย่าง
+                products = [...sampleData];
+                updateProductsTable();
+                updateSearchInfo();
+            }
+        }
+
+        // ฟังก์ชันสำหรับบันทึกข้อมูลลง JSONBin
+        async function saveProductsToJSONBin() {
+            try {
+                const response = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Master-Key': API_KEY
+                    },
+                    body: JSON.stringify({ products: products })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('ไม่สามารถบันทึกข้อมูลได้');
+                }
+                
+                console.log('บันทึกข้อมูลเรียบร้อย');
+            } catch (error) {
+                console.error('Error saving to JSONBin:', error);
+                alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' + error.message);
+            }
+        }
+
+        // ฟังก์ชันอัพเดตข้อความแสดงจำนวนสินค้า
+        function updateSearchInfo() {
+            searchInfo.textContent = `มีสินค้าทั้งหมด ${products.length} รายการ`;
+        }
+
+        // ฟังก์ชันแสดงผลการค้นหา
+        function showSearchResult() {
+            if (selectedProduct) {
+                resultName.textContent = selectedProduct.name;
+                resultId.textContent = selectedProduct.id;
+                searchResult.style.display = 'block';
+            }
+        }
+
+        // ฟังก์ชันอัพเดตตารางแสดงสินค้า
+        function updateProductsTable() {
+            if (products.length === 0) {
+                productsTableBody.innerHTML = '<tr><td colspan="3" style="text-align: center;">ยังไม่มีข้อมูล</td></tr>';
+                return;
+            }
+            
+            // เรียงลำดับตามรหัสสินค้า
+            const sortedProducts = [...products].sort((a, b) => a.id.localeCompare(b.id));
+            
+            productsTableBody.innerHTML = '';
+            sortedProducts.forEach(product => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${product.id}</td>
+                    <td>${product.name}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="edit-btn" data-id="${product.id}">แก้ไข</button>
+                            <button class="delete-btn" data-id="${product.id}">ลบ</button>
+                        </div>
+                    </td>
+                `;
+                productsTableBody.appendChild(row);
+            });
+            
+            // เพิ่ม event listeners สำหรับปุ่มแก้ไขและลบ
+            document.querySelectorAll('.edit-btn').forEach(btn => {
+                if (btn.id !== 'edit-result-btn') {
+                    btn.addEventListener('click', function() {
+                        const productId = this.getAttribute('data-id');
+                        startEdit(productId);
+                    });
+                }
+            });
+            
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                if (btn.id !== 'delete-result-btn') {
+                    btn.addEventListener('click', function() {
+                        const productId = this.getAttribute('data-id');
+                        deleteProduct(productId);
+                    });
+                }
+            });
+        }
+
+        // ฟังก์ชันเริ่มแก้ไขสินค้า
+        function startEdit(productId) {
+            const product = products.find(p => p.id === productId);
+            if (product) {
+                editProductId.value = product.id;
+                editProductName.value = product.name;
+                originalProductId = product.id;
+                
+                // เปลี่ยนไปที่แท็บแก้ไข
+                tabs.forEach(t => t.classList.remove('active'));
+                tabContents.forEach(c => c.classList.remove('active'));
+                document.getElementById('edit-tab').classList.add('active');
+            }
+        }
+
+        // ฟังก์ชันลบสินค้า
+        function deleteProduct(productId) {
+            if (confirm('คุณต้องการลบสินค้านี้ใช่หรือไม่?')) {
+                products = products.filter(p => p.id !== productId);
+                saveProductsToJSONBin(); // บันทึกลง JSONBin
+                updateProductsTable();
+                updateSearchInfo();
+                alert('ลบสินค้าเรียบร้อย');
+            }
+        }
 
         // ฟังก์ชั่นสำหรับการนำทางแท็บ
         tabs.forEach(tab => {
@@ -460,11 +548,6 @@
             reader.readAsArrayBuffer(file);
         });
 
-        // อัพเดตข้อความแสดงจำนวนสินค้า
-        function updateSearchInfo() {
-            searchInfo.textContent = `มีสินค้าทั้งหมด ${products.length} รายการ`;
-        }
-
         // ฟังก์ชั่นสำหรับค้นหาสินค้า
         searchInput.addEventListener('input', function() {
             const searchTerm = this.value.trim().toLowerCase();
@@ -514,82 +597,12 @@
             }
         });
 
-        // แสดงผลการค้นหา
-        function showSearchResult() {
-            if (selectedProduct) {
-                resultName.textContent = selectedProduct.name;
-                resultId.textContent = selectedProduct.id;
-                searchResult.style.display = 'block';
-            }
-        }
-
         // เริ่มการค้นหาใหม่
         newSearchBtn.addEventListener('click', function() {
             selectedProduct = null;
             searchInput.value = '';
             searchResult.style.display = 'none';
         });
-
-        // อัพเดตตารางแสดงสินค้า
-        function updateProductsTable() {
-            if (products.length === 0) {
-                productsTableBody.innerHTML = '<tr><td colspan="3" style="text-align: center;">ยังไม่มีข้อมูล</td></tr>';
-                return;
-            }
-            
-            // เรียงลำดับตามรหัสสินค้า
-            const sortedProducts = [...products].sort((a, b) => a.id.localeCompare(b.id));
-            
-            productsTableBody.innerHTML = '';
-            sortedProducts.forEach(product => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${product.id}</td>
-                    <td>${product.name}</td>
-                    <td>
-                        <div class="action-buttons">
-                            <button class="edit-btn" data-id="${product.id}">แก้ไข</button>
-                            <button class="delete-btn" data-id="${product.id}">ลบ</button>
-                        </div>
-                    </td>
-                `;
-                productsTableBody.appendChild(row);
-            });
-            
-            // เพิ่ม event listeners สำหรับปุ่มแก้ไขและลบ
-            document.querySelectorAll('.edit-btn').forEach(btn => {
-                if (btn.id !== 'edit-result-btn') {
-                    btn.addEventListener('click', function() {
-                        const productId = this.getAttribute('data-id');
-                        startEdit(productId);
-                    });
-                }
-            });
-            
-            document.querySelectorAll('.delete-btn').forEach(btn => {
-                if (btn.id !== 'delete-result-btn') {
-                    btn.addEventListener('click', function() {
-                        const productId = this.getAttribute('data-id');
-                        deleteProduct(productId);
-                    });
-                }
-            });
-        }
-
-        // เริ่มแก้ไขสินค้า
-        function startEdit(productId) {
-            const product = products.find(p => p.id === productId);
-            if (product) {
-                editProductId.value = product.id;
-                editProductName.value = product.name;
-                originalProductId = product.id;
-                
-                // เปลี่ยนไปที่แท็บแก้ไข
-                tabs.forEach(t => t.classList.remove('active'));
-                tabContents.forEach(c => c.classList.remove('active'));
-                document.getElementById('edit-tab').classList.add('active');
-            }
-        }
 
         // เพิ่ม event listener สำหรับปุ่มแก้ไขในผลการค้นหา
         editResultBtn.addEventListener('click', function() {
@@ -653,17 +666,6 @@
             tabs[1].click();
         });
 
-        // ลบสินค้า
-        function deleteProduct(productId) {
-            if (confirm('คุณต้องการลบสินค้านี้ใช่หรือไม่?')) {
-                products = products.filter(p => p.id !== productId);
-                saveProductsToJSONBin(); // บันทึกลง JSONBin
-                updateProductsTable();
-                updateSearchInfo();
-                alert('ลบสินค้าเรียบร้อย');
-            }
-        }
-
         // เพิ่มสินค้าใหม่
         addProductBtn.addEventListener('click', function() {
             const id = newProductId.value.trim();
@@ -694,3 +696,28 @@
             
             // กลับไปที่แท็บฐานข้อมูล
             tabs[1].click();
+        });
+
+        // สร้างไฟล์ Excel สำหรับดาวน์โหลด
+        exportExcelBtn.addEventListener('click', function() {
+            if (products.length === 0) {
+                alert('ไม่มีข้อมูลสินค้าที่จะส่งออก');
+                return;
+            }
+            
+            // สร้าง worksheet
+            const ws = XLSX.utils.json_to_sheet(products.map(p => ({
+                'Product ID': p.id,
+                'Product Name': p.name
+            })));
+            
+            // สร้าง workbook
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Products');
+            
+            // แปลงเป็นไฟล์ Excel และดาวน์โหลด
+            XLSX.writeFile(wb, 'products.xlsx');
+        });
+
+        // โหลดข้อมูลจาก JSONBin เมื่อเริ่มต้น
+        loadProductsFromJSONBin();
